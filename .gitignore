@@ -20,3 +20,8 @@ agent.db
 .vscode/
 .idea/
 .DS_Store
+
+# 本地教学资料与测试脚本（保留在本机，不纳入 Git）
+tests/
+TEACHING_GUIDE.md
+knowledge.md
