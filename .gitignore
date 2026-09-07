@@ -1,0 +1,22 @@
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# Python 虚拟环境与缓存
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 本地数据库与运行日志
+agent.db
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# 编辑器与系统文件
+.vscode/
+.idea/
+.DS_Store
