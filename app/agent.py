@@ -53,13 +53,9 @@ Final Answer: [你的最终答案]
         Returns:
             解析后的字典，包含 type（"action" 或 "final_answer"）和对应字段
         """
-        # TODO 1: 使用正则表达式提取 Thought
-        # 提示：寻找 "Thought: " 后面的内容，直到遇到换行
         thought_match = re.search(r"Thought:\s*(.+?)(?:\n|$)", response_text, re.DOTALL)
         thought = thought_match.group(1).strip() if thought_match else ""
 
-        # TODO 2: 检查是否是 Final Answer
-        # 提示：查找 "Final Answer:" 关键词
         if "Final Answer:" in response_text:
             final_answer_match = re.search(r"Final Answer:\s*(.+)", response_text, re.DOTALL)
             final_answer = final_answer_match.group(1).strip() if final_answer_match else ""
@@ -69,8 +65,6 @@ Final Answer: [你的最终答案]
                 "final_answer": final_answer
             }
 
-        # TODO 3: 提取 Action 和 Action Input
-        # 提示：使用类似的正则表达式
         action_match = re.search(r"Action:\s*(.+?)(?:\n|$)",response_text,re.DOTALL)
         action_input_match = re.search(r"Action Input:\s*(.+?)(?:\n|$)",response_text,re.DOTALL)
 
@@ -100,14 +94,10 @@ Final Answer: [你的最终答案]
         Returns:
             工具执行结果
         """
-        # TODO 4: 检查工具是否存在
-        # 提示：在 TOOLS 字典中查找
         if tool_name not in TOOLS: 
             return f"错误：工具 '{tool_name}' 不存在。可用工具：{list(TOOLS.keys())}"
 
 
-        # TODO 5: 调用工具函数并返回结果
-        # 提示：TOOLS[tool_name](tool_input)
         return TOOLS[tool_name](tool_input)
 
 
@@ -129,7 +119,6 @@ Final Answer: [你的最终答案]
         ]
 
         for iteration in range(self.max_iterations):
-            # TODO 6: 调用 LLM（DeepSeek 走 OpenAI 兼容接口）
             client = self.llm_client
             response = client.chat.completions.create(
                 model=self.model,
@@ -141,10 +130,8 @@ Final Answer: [你的最终答案]
 
 
 
-            # TODO 7: 解析 LLM 响应
             parsed = self._parse_llm_response(llm_response_text)
 
-            # TODO 8: 如果是 Final Answer，结束循环
             if parsed["type"] == "final_answer":
                 self.trajectory.append({
                     "iteration": iteration + 1,
@@ -160,7 +147,6 @@ Final Answer: [你的最终答案]
                 }
 
             
-            # TODO 9: 如果是 Action，执行工具调用
             if parsed["type"] == "action":
                 
                 observation = self._call_tool(parsed["action"],parsed["action_input"])  # 调用 self._call_tool()
@@ -168,7 +154,6 @@ Final Answer: [你的最终答案]
                 if last and last.get("action") and last["action"] == parsed["action"] and last.get("action_input") == parsed["action_input"]:
                         observation = observation +"\n[系统提示] 你刚才已用相同参数调用过此工具，结果一致。请换个思路或直接给出答案。"
 
-                # TODO 10: 记录到 trajectory
                 self.trajectory.append({
                     "iteration": iteration + 1,
                     "thought": parsed["thought"],
@@ -177,11 +162,9 @@ Final Answer: [你的最终答案]
                     "observation": observation
                 })
 
-                # TODO 11: 将 LLM 响应和工具结果追加到对话历史
                 messages.append({"role": "assistant", "content": llm_response_text})          
                 messages.append({"role": "user", "content": f"Observation: {observation}"})
 
-            # TODO 12: 如果解析错误，如何处理？
             if parsed["type"] == "error":
                 # 把格式错误 + 纠错要求喂回去，让 LLM 重新输出
                 messages.append({"role": "assistant", "content": llm_response_text})

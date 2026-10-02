@@ -1,0 +1,23 @@
+# 构建上下文要小：venv/（几百 MB）、agent.db、日志、.git 都不该进镜像。
+# 不加这个文件，`docker build` 会把整个项目目录塞给 daemon —— 慢，而且
+# 一旦 COPY . . 就会把本地的 venv 和数据库打进镜像（镜像里跑的是宿主机的绝对路径）。
+.git/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite*
+*.log
+.env
+.env.*
+!.env.example
+.docker/
+TEACHING_GUIDE.md
+CLASS_LOG.md
+knowledge.md
+INTERVIEW_CARD.md
+tests/

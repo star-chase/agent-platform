@@ -1,12 +1,21 @@
 from datetime import datetime, timezone
 
 
+# 阶段 6 的审批边：
+#   批准 → PENDING（只是解除了阻塞，任务**还没开始执行**，要重新入队）
+#   拒绝 → CANCELLED（人类的否决是确定性事件，不走重试）
+#   动态审批（6-D）允许 RUNNING 中途停下来等人，恢复时回 RUNNING
+# 阶段 7-A-2 的预算边：RUNNING -> BUDGET_EXCEEDED（终态，没有出边）。
+# 为什么它不是 FAILED：FAILED 有出边（-> RUNNING，节点级重试要用），
+# 而"预算已经花光"重试一次还是超支，是确定性失败。**状态的出边形状本身就是语义**。
 VALID_TRANSITIONS = {
-    "PENDING": {"RUNNING", "CANCELLED"},
-    "RUNNING": {"COMPLETED", "FAILED", "CANCELLED"},
+    "PENDING": {"RUNNING", "CANCELLED", "WAITING_APPROVAL"},
+    "RUNNING": {"COMPLETED", "FAILED", "CANCELLED", "WAITING_APPROVAL", "BUDGET_EXCEEDED"},
     "FAILED": {"RUNNING"},
+    "WAITING_APPROVAL": {"PENDING", "RUNNING", "CANCELLED"},
     "COMPLETED": set(),
     "CANCELLED": set(),
+    "BUDGET_EXCEEDED": set(),
 }
 
 

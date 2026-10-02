@@ -44,6 +44,29 @@ def search(query: str) -> str:
     
 
 
+# 阶段 6-D：控制面工具（不是业务工具）。
+# 它没有 Python 实现 —— 执行器会拦截这次调用，把任务停下来等人类批准，
+# 而不是像 search/calculator 那样"执行并返回结果"。
+REQUEST_APPROVAL_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "request_human_approval",
+        "description": (
+            "在执行不可逆或对外的动作（对外发布、发邮件/消息、花钱、删数据、写外部系统）之前，"
+            "先请求人类批准。调用后本任务会暂停，等人类批准或拒绝。"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "reason": {"type": "string", "description": "为什么这一步需要人类批准"},
+                "proposed_action": {"type": "string", "description": "你打算具体做什么"},
+            },
+            "required": ["reason", "proposed_action"],
+        },
+    },
+}
+
+
 # 工具注册表：工具名 -> 工具函数
 TOOLS: Dict[str, Callable] = {
     "calculator": calculator,

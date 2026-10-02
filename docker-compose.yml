@@ -1,0 +1,106 @@
+# 四个服务：postgres / redis / api / worker（worker 可横向扩展）
+#
+# 三个关键设计点（都是踩过才知道的）：
+#
+# 1. **容器里不能用 localhost 连别的服务**。每个容器有自己的网络命名空间，
+#    localhost 指的是它自己。要用**服务名**当主机名 —— compose 起了一个内部 DNS，
+#    `postgres` / `redis` 就是另外两个容器的地址。
+#    这正好解释了为什么 app 侧配置要读 DATABASE_URL 而不是写死路径：
+#    同一份代码，换一个 URL 就从"连本机文件"变成"连另一个容器"。
+#
+# 2. **depends_on 只保证"启动顺序"，不保证"准备好了"**。PostgreSQL 容器启动后
+#    还要初始化数据库，这期间连它会直接失败。所以配 healthcheck +
+#    `condition: service_healthy` —— 这才是"等它真的能用"。
+#
+# 3. **worker 不映射端口、不挂代码卷**。它是纯消费者，只往外连。
+#    代码进镜像（不可变），配置进环境变量 —— 12 要素应用的基本纪律。
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: agent123
+      POSTGRES_DB: agent_platform
+    volumes:
+      # 命名卷：容器删了数据还在。没有它，`docker compose down` 等于清库。
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent -d agent_platform"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      # 只在本地调试时暴露：方便用宿主机上的 psql / DBeaver 连进去看数据。
+      # 生产环境应该删掉这两行（容器之间走内部网络，根本不需要映射到宿主机）。
+      #
+      # 宿主机端口做成可配：本机常常已经有 PostgreSQL / Redis 占着默认端口，
+      # 硬写 5432 会让 `docker compose up` 直接报 "port is already allocated"。
+      # 容器**内部**端口永远是 5432/6379 —— 应用连的是服务名 + 内部端口，不受这里影响。
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  migrate:
+    build: .
+    command: python -m app.migrate
+    depends_on:
+      postgres: {condition: service_healthy}
+    env_file: [.env.docker]
+    # 只跑一次就退出，所以不要 restart 策略（否则迁移完还反复重启）。
+    # 其它服务等它**成功退出**再启动 —— 见下面 service_completed_successfully 的说明。
+    restart: "no"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    # --host 0.0.0.0 不能省：默认只监听 127.0.0.1，那是**容器内部**的回环地址，
+    # 端口映射进来了也连不上（这是新手最常撞的一堵墙）。
+    depends_on:
+      # service_completed_successfully：等 migrate 这个一次性任务**成功跑完**，
+      # 而不是"等它启动"。普通的 depends_on 只保证启动顺序，此时表可能还没建好。
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    env_file: [.env.docker]
+    ports:
+      - "${API_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: python -m app.worker
+    depends_on:
+      # service_completed_successfully：等 migrate 这个一次性任务**成功跑完**，
+      # 而不是"等它启动"。普通的 depends_on 只保证启动顺序，此时表可能还没建好。
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    env_file: [.env.docker]
+    # 想开几个消费者：docker compose up --scale worker=3
+    # worker 是**无状态**的（状态都在 PG 和 Redis 里），所以能随便扩 ——
+    # 这正是前面几层抽象攒下来的红利：换库、加消费者都不用改代码。
+    restart: unless-stopped
+
+  orchestrator:
+    build: .
+    command: python -m app.orchestrator
+    depends_on:
+      # service_completed_successfully：等 migrate 这个一次性任务**成功跑完**，
+      # 而不是"等它启动"。普通的 depends_on 只保证启动顺序，此时表可能还没建好。
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    env_file: [.env.docker]
+    # 编排器**只能有一个**：它在内存里维持"上一轮派发了什么"，
+    # 跑两个副本会重复派发同一个节点（阶段 5 讲"为什么编排要单独一个进程"时说过）。
+    # 这也是它和 worker 的本质区别：worker 无状态可扩，编排器有状态不可扩。
+    restart: unless-stopped
+
+volumes:
+  pgdata:
