@@ -4,6 +4,11 @@
 > 目标不是"跑通一个 demo"，而是把每一层的**为什么**都踩明白：为什么这样设计、
 > 换一种做法会付出什么代价、出了问题怎么定位。
 
+[![CI](https://github.com/star-chase/agent-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/star-chase/agent-platform/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)](requirements.txt)
+[![Tests](https://img.shields.io/badge/tests-245%20passed-2ea043)](tests)
+[![Evals](https://img.shields.io/badge/evals-24%20scenarios-7c3aed)](evals)
+
 ---
 
 ## 1. 它是什么
@@ -77,7 +82,9 @@ curl -X POST localhost:8000/workflows -H 'Content-Type: application/json' \
   -d '{"goal":"分别查一下北京和上海的人口，写一段对比总结","budget_usd":0.05}'
 ```
 
-测试：`python -m pytest tests/ -q` → **238 passed**（不需要网络、不需要数据库、不需要 Redis）。
+测试：`python -m pytest tests/ -q` → **245 passed**（不需要网络、不需要数据库、不需要 Redis）。
+
+场景评测：`python -m evals.run_evals --check` → **24/24 场景通过**（同样离线可跑，覆盖计划校验 / 调度终态 / 治理 / 成本四类场景，报告见 `evals/report.md`）。
 
 ---
 
@@ -127,6 +134,15 @@ app/
   logging_setup.py     结构化 JSON 日志 + contextvars 上下文
   db.py                数据库访问层（SQLite / PostgreSQL 双方言适配）
   config.py            集中式配置（唯一读环境变量的地方）
+```
+
+工程配套：
+
+```text
+.github/workflows/ci.yml   单元测试 + 场景评测 + 评测报告 artifact
+evals/                     场景评测：scenarios.jsonl + 评分卡（离线可跑）
+docs/demo/                 演示与故障注入素材（真实跑出来的 /cost、/trace、压测、故障注入）
+scripts/demo/              生成素材的脚本：capture_cost_trace / loadtest / fault_injection
 ```
 
 ---
@@ -207,6 +223,18 @@ GET /workflows/{id}/trace
 
 ---
 
+## 5.1 演示与故障注入（可复现证据）
+
+三条素材都是真跑出来的（真实容器栈 + 真实模型调用），脚本在 `scripts/demo/`，产物在 `docs/demo/`：
+
+| 素材 | 内容 | 复现 |
+| --- | --- | --- |
+| [`docs/demo/cost-trace.md`](docs/demo/cost-trace.md) | 一条 workflow 的 `/cost` 与 `/trace` 原始响应：6382 入 + 3478 出 token、$0.005393（预算 $0.05）；关键路径 12.9 s；最慢节点 7.5 s 里 7.4 s 是模型延迟 | `python3 scripts/demo/capture_cost_trace.py` |
+| [`docs/demo/loadtest.md`](docs/demo/loadtest.md) | 6 条 workflow 并发：1 worker 119.8 s（3.0 条/分钟）→ 3 worker 45.7 s（7.9 条/分钟），吞吐 2.6×，成本几乎不变（$0.0318 → $0.0307） | `python3 scripts/demo/loadtest.py --label worker-1` |
+| [`docs/demo/fault-injection.md`](docs/demo/fault-injection.md) | 故障注入三连：kill worker（63.6 s 回收 + 节点重试成功）、kill Redis（4 个 PENDING 搁浅 → 补偿重投 39.4 s 自愈）、极小预算（终态 FAILED、不重试） | `python3 scripts/demo/fault_injection.py --scenario all` |
+
+> 这些脚本会花真实 API 额度：一条三节点 workflow 约 $0.005。
+
 ## 6. 数据库：SQLite 与 PostgreSQL 双方言
 
 | 差异 | SQLite | PostgreSQL | 抹平方式 |
@@ -235,6 +263,7 @@ GET /workflows/{id}/trace
 | 时间戳格式不一致 | PG 返回 `...346574+00`，与 SQLite 混用相减 → TypeError | 方言差异要**逐字符**对齐 |
 | 容器里读不了代码 | `PermissionError: /app/app/db.py` | `COPY` 的权限位来自构建上下文，要 `--chown` |
 | 启动快照是空的 | 先打日志、后配日志 → 第一条进了 lastResort | 顺序：**先配置日志，再打日志** |
+| **Redis 丢消息** | kill Redis 后，队列里的 task_id 全没了；任务还是 PENDING、node 又已在 dispatched 里 → 调度器不再派发，流水线永久停在 RUNNING（故障注入实测） | 队列只是投递层、状态才是事实来源：按 DB 补偿重投（`ORPHAN_TASK_RECOVERY_SECONDS`，默认关） |
 
 ---
 
@@ -249,7 +278,8 @@ GET /workflows/{id}/trace
 | `DATABASE_PATH` | `agent.db` | 未设 `DATABASE_URL` 时的 SQLite 文件 |
 | `REDIS_URL` | `redis://localhost:6379/0` | |
 | `ORCHESTRATOR_POLL_INTERVAL` | `2` | 编排轮询间隔（秒） |
-| `STALE_TASK_MINUTES` | `15` | 卡死任务回收阈值 |
+| `STALE_TASK_MINUTES` | `15` | 卡死任务回收阈值（RUNNING 超过它就标记 FAILED，交给节点级重试） |
+| `ORPHAN_TASK_RECOVERY_SECONDS` | `0`（关闭） | 队列消息丢失后，超过这个秒数仍 `PENDING` 的任务会被补偿重投；补偿后推进 `updated_at`，避免每个 tick 重复投递 |
 | `LOG_PATH` | 空（只写 stdout） | 设了同时写文件 |
 
 配置由 `app/config.py` 统一定义，**类型错误在启动时就会失败**，不会拖到运行中。

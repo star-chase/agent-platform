@@ -1,0 +1,96 @@
+{
+  "label": "worker-1",
+  "workers": 1,
+  "results": [
+    {
+      "workflow_id": "7ab8b0cb-b66a-44af-ae94-64b814800abe",
+      "status": "COMPLETED",
+      "wall_ms": 109522.53503099996,
+      "cost": {
+        "workflow_id": "7ab8b0cb-b66a-44af-ae94-64b814800abe",
+        "model": "deepseek-v4-flash",
+        "budget_usd": 0.05,
+        "input_tokens": 6212,
+        "output_tokens": 3062,
+        "cost_usd": 0.005045
+      },
+      "nodes": 3,
+      "duration_ms": 64099
+    },
+    {
+      "workflow_id": "a7ae6b19-8225-4193-9015-83c944555f6a",
+      "status": "COMPLETED",
+      "wall_ms": 115636.52543400008,
+      "cost": {
+        "workflow_id": "a7ae6b19-8225-4193-9015-83c944555f6a",
+        "model": "deepseek-v4-flash",
+        "budget_usd": 0.05,
+        "input_tokens": 6172,
+        "output_tokens": 2998,
+        "cost_usd": 0.004964
+      },
+      "nodes": 3,
+      "duration_ms": 56300
+    },
+    {
+      "workflow_id": "9f353868-24e7-47a9-a52b-4fac2ccd9b09",
+      "status": "COMPLETED",
+      "wall_ms": 119716.54655600013,
+      "cost": {
+        "workflow_id": "9f353868-24e7-47a9-a52b-4fac2ccd9b09",
+        "model": "deepseek-v4-flash",
+        "budget_usd": 0.05,
+        "input_tokens": 6400,
+        "output_tokens": 3630,
+        "cost_usd": 0.005721
+      },
+      "nodes": 3,
+      "duration_ms": 46635
+    },
+    {
+      "workflow_id": "553a7ea5-d387-412c-a63f-f41d12ade6f3",
+      "status": "COMPLETED",
+      "wall_ms": 94801.729884,
+      "cost": {
+        "workflow_id": "553a7ea5-d387-412c-a63f-f41d12ade6f3",
+        "model": "deepseek-v4-flash",
+        "budget_usd": 0.05,
+        "input_tokens": 6151,
+        "output_tokens": 3307,
+        "cost_usd": 0.005298
+      },
+      "nodes": 3,
+      "duration_ms": 90860
+    },
+    {
+      "workflow_id": "460b1d6d-a855-4084-b446-a4bbd1a7a90a",
+      "status": "COMPLETED",
+      "wall_ms": 101030.72134199987,
+      "cost": {
+        "workflow_id": "460b1d6d-a855-4084-b446-a4bbd1a7a90a",
+        "model": "deepseek-v4-flash",
+        "budget_usd": 0.05,
+        "input_tokens": 6231,
+        "output_tokens": 3052,
+        "cost_usd": 0.00504
+      },
+      "nodes": 3,
+      "duration_ms": 81727
+    },
+    {
+      "workflow_id": "9a475619-e646-433b-9f24-eadf654f347a",
+      "status": "COMPLETED",
+      "wall_ms": 105424.00109100004,
+      "cost": {
+        "workflow_id": "9a475619-e646-433b-9f24-eadf654f347a",
+        "model": "deepseek-v4-flash",
+        "budget_usd": 0.05,
+        "input_tokens": 6524,
+        "output_tokens": 3635,
+        "cost_usd": 0.00576
+      },
+      "nodes": 3,
+      "duration_ms": 73662
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+[
+  {
+    "scenario": "redis-restart",
+    "workflow_ids": [
+      "81c9078e-824c-4070-8198-4b2a64f3b396",
+      "6c0c9334-c28c-4493-97bc-883a6d59c899"
+    ],
+    "queued_messages_before_restart": "4",
+    "queued_messages_after_restart": "4",
+    "pending_before_restart": 4,
+    "pending_after_restart": 4,
+    "running_after_restart": 0,
+    "stranded": true,
+    "terminals_after_restart": [
+      "RUNNING",
+      "RUNNING"
+    ]
+  }
+]

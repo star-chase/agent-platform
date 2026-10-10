@@ -45,6 +45,7 @@ class WorkflowOrchestrator:
         dag_loader: Callable[[str], Any] | None = None,
         should_stop: Callable[[], bool] | None = None,
         recover_stale: Callable[[], Any] | None = None,
+        recover_orphans: Callable[[], Any] | None = None,
         publish: Callable[[str, dict[str, Any]], None] | None = None,
         request_approval: Callable[[str, str, str, str | None], None] | None = None,
     ):
@@ -59,6 +60,9 @@ class WorkflowOrchestrator:
         self.should_stop = should_stop or (lambda: False)
         # 每轮先回收僵尸任务（卡在 RUNNING 太久的），否则 workflow 会永久卡住
         self.recover_stale = recover_stale
+        # 再补偿一次「消息丢了但状态还是 PENDING」的孤儿任务：队列只是投递层，
+        # 状态才是事实来源。没配置（None）时不产生任何额外查询。
+        self.recover_orphans = recover_orphans
         # 可注入的"发布 workflow 级事件"函数（编排器掌握全局状态，是终态事件的发布方）；
         # 离线测试不注入就是 None，所以调用点必须判空。
         self.publish = publish
@@ -80,6 +84,8 @@ class WorkflowOrchestrator:
         """
         if self.recover_stale:
             self.recover_stale()
+        if self.recover_orphans:
+            self.recover_orphans()
         advance = []
         for workflow_id in self.store.list_workflow_ids_by_status("RUNNING"):
             dag = self.dag_loader(workflow_id)
@@ -153,7 +159,7 @@ def main() -> None:
     from app.queue import enqueue_task, get_redis_client
     from app.config import describe_settings
     from app.logging_setup import setup_logging
-    from app.recovery import recover_stale_tasks
+    from app.recovery import recover_orphan_pending_tasks, recover_stale_tasks
     from app.workflow_store import SQLiteWorkflowStore
 
     load_dotenv()
@@ -175,6 +181,15 @@ def main() -> None:
         enqueue=lambda task_id: enqueue_task(task_id, client=redis_client),
         poll_interval=settings.orchestrator_poll_interval,
         recover_stale=lambda: recover_stale_tasks(db_path),
+        recover_orphans=(
+            (lambda: recover_orphan_pending_tasks(
+                db_path,
+                settings.orphan_task_recovery_seconds,
+                enqueue=lambda task_id: enqueue_task(task_id, client=redis_client),
+            ))
+            if settings.orphan_task_recovery_seconds > 0
+            else None
+        ),
         publish=lambda workflow_id, event: publish_workflow_event(
             workflow_id, event, client=redis_client
         ),

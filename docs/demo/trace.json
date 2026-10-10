@@ -1,0 +1,124 @@
+{
+  "workflow_id": "4a1367da-b412-46d3-b97c-aae209c04c04",
+  "goal": "分别查一下北京和上海的人口，然后写一段对比总结",
+  "status": "COMPLETED",
+  "created_at": "2026-10-10 08:34:30.306",
+  "updated_at": "2026-10-10 08:34:52.719",
+  "duration_ms": 21559,
+  "attempts": [
+    {
+      "node_id": "beijing_population",
+      "task_id": "c7e633fb-d484-478c-b222-ce1e739ef2b5",
+      "attempt": 1,
+      "status": "COMPLETED",
+      "started_at": "2026-10-10 08:34:30.464",
+      "finished_at": "2026-10-10 08:34:37.820",
+      "duration_ms": 7356,
+      "llm_ms": 7230,
+      "steps": 3,
+      "input_tokens": 2218,
+      "output_tokens": 1074,
+      "cost_usd": 0.00178
+    },
+    {
+      "node_id": "shanghai_population",
+      "task_id": "ae4045c9-4603-470f-bf78-6816985cc44e",
+      "attempt": 1,
+      "status": "COMPLETED",
+      "started_at": "2026-10-10 08:34:37.843",
+      "finished_at": "2026-10-10 08:34:45.336",
+      "duration_ms": 7493,
+      "llm_ms": 7383,
+      "steps": 3,
+      "input_tokens": 2293,
+      "output_tokens": 1308,
+      "cost_usd": 0.002058
+    },
+    {
+      "node_id": "compare_summary",
+      "task_id": "70a841da-8df0-42b9-b395-6e3df5a90278",
+      "attempt": 1,
+      "status": "COMPLETED",
+      "started_at": "2026-10-10 08:34:46.660",
+      "finished_at": "2026-10-10 08:34:52.023",
+      "duration_ms": 5363,
+      "llm_ms": 5316,
+      "steps": 1,
+      "input_tokens": 1582,
+      "output_tokens": 1025,
+      "cost_usd": 0.001555
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "beijing_population",
+      "attempts": 1,
+      "status": "COMPLETED",
+      "duration_ms": 7356,
+      "llm_ms": 7230,
+      "steps": 3,
+      "input_tokens": 2218,
+      "output_tokens": 1074,
+      "cost_usd": 0.00178
+    },
+    {
+      "node_id": "shanghai_population",
+      "attempts": 1,
+      "status": "COMPLETED",
+      "duration_ms": 7493,
+      "llm_ms": 7383,
+      "steps": 3,
+      "input_tokens": 2293,
+      "output_tokens": 1308,
+      "cost_usd": 0.002058
+    },
+    {
+      "node_id": "compare_summary",
+      "attempts": 1,
+      "status": "COMPLETED",
+      "duration_ms": 5363,
+      "llm_ms": 5316,
+      "steps": 1,
+      "input_tokens": 1582,
+      "output_tokens": 1025,
+      "cost_usd": 0.001555
+    }
+  ],
+  "critical_path": [
+    "shanghai_population",
+    "compare_summary"
+  ],
+  "critical_path_ms": 12856,
+  "slowest_node": {
+    "node_id": "shanghai_population",
+    "attempts": 1,
+    "status": "COMPLETED",
+    "duration_ms": 7493,
+    "llm_ms": 7383,
+    "steps": 3,
+    "input_tokens": 2293,
+    "output_tokens": 1308,
+    "cost_usd": 0.002058
+  },
+  "most_tokens_node": {
+    "node_id": "shanghai_population",
+    "attempts": 1,
+    "status": "COMPLETED",
+    "duration_ms": 7493,
+    "llm_ms": 7383,
+    "steps": 3,
+    "input_tokens": 2293,
+    "output_tokens": 1308,
+    "cost_usd": 0.002058
+  },
+  "slowest_llm_call": {
+    "task_id": "ae4045c9-4603-470f-bf78-6816985cc44e",
+    "iteration": 3,
+    "type": "final_answer",
+    "tool_name": null,
+    "duration_ms": 5372,
+    "input_tokens": 987,
+    "output_tokens": 1024
+  },
+  "total_cost_usd": 0.005393
+}

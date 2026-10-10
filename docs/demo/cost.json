@@ -1,0 +1,8 @@
+{
+  "workflow_id": "4a1367da-b412-46d3-b97c-aae209c04c04",
+  "model": "deepseek-v4-flash",
+  "budget_usd": 0.05,
+  "input_tokens": 6093,
+  "output_tokens": 3407,
+  "cost_usd": 0.005393
+}

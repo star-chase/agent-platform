@@ -1,0 +1,11 @@
+# 故障注入实验用的 compose 覆盖：把恢复阈值调到秒级，几分钟内就能看到效果。
+#
+# 用法：
+#   docker compose -f docker-compose.yml -f scripts/demo/compose.fault.yml up -d --no-deps orchestrator worker
+# 实验结束记得恢复正常阈值：
+#   docker compose up -d --no-deps orchestrator worker
+services:
+  orchestrator:
+    environment:
+      STALE_TASK_MINUTES: "1"
+      ORPHAN_TASK_RECOVERY_SECONDS: "10"

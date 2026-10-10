@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     # ---- 编排 ----
     orchestrator_poll_interval: float = 2.0
     stale_task_minutes: int = 15
+    # 孤儿 PENDING 任务重新入队的阈值（秒）。0 = 关闭：
+    # 队列消息丢了（Redis 非正常宕机）而任务还是 PENDING 时，靠它按 DB 状态补偿重投。
+    orphan_task_recovery_seconds: int = 0
 
     # ---- 日志 ----
     # 留空 = 只写 stdout（容器里的标准做法）。本地设成 agent.log 方便 grep。
@@ -126,6 +129,7 @@ def describe_settings(settings: Settings | None = None) -> dict[str, object]:
         "redis_url": settings.redis_url,
         "orchestrator_poll_interval": settings.orchestrator_poll_interval,
         "stale_task_minutes": settings.stale_task_minutes,
+        "orphan_task_recovery_seconds": settings.orphan_task_recovery_seconds,
         "log_path": settings.log_path,
         "pid": os.getpid(),
     }

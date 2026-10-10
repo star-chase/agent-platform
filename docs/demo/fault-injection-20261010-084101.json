@@ -1,0 +1,92 @@
+[
+  {
+    "scenario": "worker-kill",
+    "workflow_id": "a7ffba9e-f142-440e-a8bd-e647094e720f",
+    "running_before_kill": 1,
+    "running_after_kill": 1,
+    "terminal": "COMPLETED",
+    "recovery_seconds": 66.7,
+    "attempts": [
+      {
+        "node_id": "research_beijing",
+        "attempt": 1,
+        "status": "FAILED",
+        "duration_ms": null
+      },
+      {
+        "node_id": "research_shanghai",
+        "attempt": 1,
+        "status": "COMPLETED",
+        "duration_ms": 7347
+      },
+      {
+        "node_id": "research_beijing",
+        "attempt": 2,
+        "status": "COMPLETED",
+        "duration_ms": 6355
+      },
+      {
+        "node_id": "write_comparison",
+        "attempt": 1,
+        "status": "COMPLETED",
+        "duration_ms": 5454
+      }
+    ],
+    "retried_nodes": [
+      "research_beijing"
+    ],
+    "cost": {
+      "workflow_id": "a7ffba9e-f142-440e-a8bd-e647094e720f",
+      "model": "deepseek-v4-flash",
+      "budget_usd": 0.05,
+      "input_tokens": 6554,
+      "output_tokens": 3106,
+      "cost_usd": 0.005186
+    }
+  },
+  {
+    "scenario": "redis-restart",
+    "workflow_ids": [
+      "8375fbd2-0b82-4e11-9c31-8ef6aca8f3ba",
+      "6c1451fc-daea-4a29-91e6-c4bbde3daf64"
+    ],
+    "queued_messages_before_restart": "4",
+    "pending_before_restart": 4,
+    "pending_after_restart": 2,
+    "running_after_restart": 1,
+    "stranded": false,
+    "terminals_after_restart": [
+      "RUNNING",
+      "RUNNING"
+    ]
+  },
+  {
+    "scenario": "budget-gate",
+    "workflow_id": "0ca2dfce-7fa5-4d9d-9618-b398d8a95644",
+    "terminal": "FAILED",
+    "task_states": [
+      "collect_beijing_population:BUDGET_EXCEEDED:1",
+      "collect_shanghai_population:BUDGET_EXCEEDED:1"
+    ],
+    "attempts": [
+      {
+        "node_id": "collect_beijing_population",
+        "attempt": 1,
+        "status": "BUDGET_EXCEEDED"
+      },
+      {
+        "node_id": "collect_shanghai_population",
+        "attempt": 1,
+        "status": "BUDGET_EXCEEDED"
+      }
+    ],
+    "cost": {
+      "workflow_id": "0ca2dfce-7fa5-4d9d-9618-b398d8a95644",
+      "model": "deepseek-v4-flash",
+      "budget_usd": 0.0002,
+      "input_tokens": 585,
+      "output_tokens": 129,
+      "cost_usd": 0.0003
+    }
+  }
+]

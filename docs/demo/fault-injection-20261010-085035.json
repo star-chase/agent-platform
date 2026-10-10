@@ -1,0 +1,95 @@
+[
+  {
+    "scenario": "worker-kill",
+    "workflow_id": "426fa6bf-16ac-44c3-bec2-0cf3a26bc5c6",
+    "running_before_kill": 1,
+    "running_after_kill": 1,
+    "terminal": "COMPLETED",
+    "recovery_seconds": 63.6,
+    "attempts": [
+      {
+        "node_id": "beijing_pop",
+        "attempt": 1,
+        "status": "FAILED",
+        "duration_ms": null
+      },
+      {
+        "node_id": "shanghai_pop",
+        "attempt": 1,
+        "status": "COMPLETED",
+        "duration_ms": 7781
+      },
+      {
+        "node_id": "beijing_pop",
+        "attempt": 2,
+        "status": "COMPLETED",
+        "duration_ms": 6690
+      },
+      {
+        "node_id": "compare_summary",
+        "attempt": 1,
+        "status": "COMPLETED",
+        "duration_ms": 5222
+      }
+    ],
+    "retried_nodes": [
+      "beijing_pop"
+    ],
+    "cost": {
+      "workflow_id": "426fa6bf-16ac-44c3-bec2-0cf3a26bc5c6",
+      "model": "deepseek-v4-flash",
+      "budget_usd": 0.05,
+      "input_tokens": 6599,
+      "output_tokens": 3428,
+      "cost_usd": 0.005553
+    }
+  },
+  {
+    "scenario": "redis-restart",
+    "workflow_ids": [
+      "6cc8bc87-74ca-4c88-a7fb-cae6c2dacdf2",
+      "2cee35bb-e3fe-4438-ad3e-b406a0aa212b"
+    ],
+    "queued_messages_before_restart": "4",
+    "queued_messages_after_restart": "4",
+    "pending_before_restart": 4,
+    "pending_after_restart": 4,
+    "running_after_restart": 0,
+    "stranded": true,
+    "recovered_in_seconds": 39.4,
+    "terminals_after_recovery": [
+      "COMPLETED",
+      "COMPLETED"
+    ],
+    "recovered": true
+  },
+  {
+    "scenario": "budget-gate",
+    "workflow_id": "654958b1-88d2-4e27-b358-0ad9e76e3f04",
+    "terminal": "FAILED",
+    "task_states": [
+      "beijing_population:BUDGET_EXCEEDED:1",
+      "shanghai_population:BUDGET_EXCEEDED:1"
+    ],
+    "attempts": [
+      {
+        "node_id": "beijing_population",
+        "attempt": 1,
+        "status": "BUDGET_EXCEEDED"
+      },
+      {
+        "node_id": "shanghai_population",
+        "attempt": 1,
+        "status": "BUDGET_EXCEEDED"
+      }
+    ],
+    "cost": {
+      "workflow_id": "654958b1-88d2-4e27-b358-0ad9e76e3f04",
+      "model": "deepseek-v4-flash",
+      "budget_usd": 0.0002,
+      "input_tokens": 567,
+      "output_tokens": 99,
+      "cost_usd": 0.000262
+    }
+  }
+]
