@@ -1,3 +1,4 @@
+import atexit
 import logging
 import signal
 import os
@@ -110,6 +111,14 @@ def main() -> None:
     # 先配置日志，再打第一条日志（理由见 orchestrator.main 的同款注释）
     setup_logging(log_path=settings.log_path)
     logger.info("worker_starting", extra=describe_settings(settings))
+
+    # MCP 外部工具：worker 才是真正执行工具调用的进程，必须在这里也注册一次。
+    from app.mcp.bridge import register_mcp_tools, shutdown_mcp_clients
+
+    mcp_tools = register_mcp_tools(settings.mcp_servers)
+    if mcp_tools:
+        logger.info("mcp_tools_registered", extra={"tools": mcp_tools})
+    atexit.register(shutdown_mcp_clients)
     redis_client = get_redis_client()
     llm_client = OpenAI(
         api_key=settings.deepseek_api_key,

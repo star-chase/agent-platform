@@ -1,4 +1,6 @@
+import atexit
 import json
+import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -31,6 +33,17 @@ load_dotenv()
 # 默认不落盘：容器里的最佳实践是"进程只写 stdout，由外部收集"；
 # 本地排查时设 LOG_PATH=agent_uv.log 就能直接 grep。
 setup_logging(log_path=get_settings().log_path)
+logger = logging.getLogger(__name__)
+
+# MCP 外部工具：进程启动时注册一次。fail-open —— 某个 server 起不来只是少一个工具，
+# 平台照常启动；真正的调用失败由 bridge 的 handler 返回错误文本。
+from app.mcp.bridge import register_mcp_tools, shutdown_mcp_clients  # noqa: E402
+
+_mcp_tools = register_mcp_tools(get_settings().mcp_servers)
+if _mcp_tools:
+    logger.info("mcp_tools_registered", extra={"tools": _mcp_tools})
+atexit.register(shutdown_mcp_clients)
+
 app = FastAPI(title="Agent Platform")
 
 

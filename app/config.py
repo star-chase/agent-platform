@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     # 队列消息丢了（Redis 非正常宕机）而任务还是 PENDING 时，靠它按 DB 状态补偿重投。
     orphan_task_recovery_seconds: int = 0
 
+    # ---- MCP（外部工具）----
+    # JSON 数组：[{"name": "rag", "command": ["python", "-m", "app.mcp.server"],
+    #             "env": {...}, "timeout_seconds": 20, "allowed_tools": [...]}]
+    # 空 = 不注册任何外部工具，默认行为完全不变。
+    mcp_servers: str | None = None
+
     # ---- 日志 ----
     # 留空 = 只写 stdout（容器里的标准做法）。本地设成 agent.log 方便 grep。
     log_path: str | None = None
@@ -130,6 +136,7 @@ def describe_settings(settings: Settings | None = None) -> dict[str, object]:
         "orchestrator_poll_interval": settings.orchestrator_poll_interval,
         "stale_task_minutes": settings.stale_task_minutes,
         "orphan_task_recovery_seconds": settings.orphan_task_recovery_seconds,
+        "mcp_servers_configured": bool(settings.mcp_servers),
         "log_path": settings.log_path,
         "pid": os.getpid(),
     }
