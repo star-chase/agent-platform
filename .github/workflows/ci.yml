@@ -25,6 +25,9 @@ jobs:
       - name: Scenario evals
         run: python -m evals.run_evals --check --report evals/report.md
 
+      - name: Check MCP server（工具 schema 自检）
+        run: python -m app.mcp.server --list-tools > /dev/null
+
       - name: Upload eval report
         uses: actions/upload-artifact@v4
         with:

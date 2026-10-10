@@ -142,6 +142,8 @@ app/
 .github/workflows/ci.yml   单元测试 + 场景评测 + 评测报告 artifact
 evals/                     场景评测：scenarios.jsonl + 评分卡（离线可跑）
 docs/demo/                 演示与故障注入素材（真实跑出来的 /cost、/trace、压测、故障注入）
+docs/demo/mcp.md           MCP 端到端演示：平台作为客户端调用 rag-agent 的检索工具
+app/mcp/                   MCP 客户端 / 桥接 / 本平台自己的 MCP server
 scripts/demo/              生成素材的脚本：capture_cost_trace / loadtest / fault_injection
 ```
 
@@ -234,6 +236,46 @@ GET /workflows/{id}/trace
 | [`docs/demo/fault-injection.md`](docs/demo/fault-injection.md) | 故障注入三连：kill worker（63.6 s 回收 + 节点重试成功）、kill Redis（4 个 PENDING 搁浅 → 补偿重投 39.4 s 自愈）、极小预算（终态 FAILED、不重试） | `python3 scripts/demo/fault_injection.py --scenario all` |
 
 > 这些脚本会花真实 API 额度：一条三节点 workflow 约 $0.005。
+
+## 5.2 MCP：既能用外部工具，也能被别的 Agent 调用
+
+MCP（Model Context Protocol）让"能力"变成标准接口。这里是双向的：
+
+### 作为 MCP 客户端（消费外部工具）
+
+配置 `MCP_SERVERS`（JSON 数组）后，平台启动时握手并把对方的 `tools/list` 注册进自己的工具表：
+
+```json
+[{"name": "rag", "command": ["python", "-m", "app.mcp.server"], "cwd": "/path/to/rag-agent",
+  "env": {"MCP_USER_EMAIL": "demo@example.com", "MCP_DEFAULT_KB_ID": "1"},
+  "timeout_seconds": 20, "allowed_tools": ["search_knowledge", "ask_knowledge"]}]
+```
+
+- 工具名加前缀 `mcp__<server>__<tool>`，在 `/trace` 里一眼看出"这一步是外部工具"；
+- **fail-open**：某个 server 起不来只是少几个工具，平台照常启动；
+- **fail-soft**：调用超时/业务失败返回错误文本（进 steps 表的 observation），不拖死 workflow；
+  超时会 kill 子进程，下次调用自动重启；
+- 实测记录见 [`docs/demo/mcp.md`](docs/demo/mcp.md)。
+
+### 作为 MCP server（把平台能力暴露出去）
+
+```bash
+python -m app.mcp.server --list-tools   # 自检：打印工具 schema
+python -m app.mcp.server                # stdio 服务
+```
+
+| 工具 | 说明 |
+| --- | --- |
+| `submit_workflow` | 提交一条 workflow（目标 + 可选预算） |
+| `get_workflow` | 状态与最终产出 |
+| `get_cost` | token / 美元 / 预算 |
+| `get_trace` | 关键路径、最慢节点、节点尝试次数 |
+| `list_pending_approvals` / `decide_approval` | 控制面，**默认不挂载**，需要 `MCP_ALLOW_CONTROL=1` |
+
+协议层是手写的（`app/mcp/protocol.py`，与 rag-agent 侧同一份实现）：stdio 上用换行分隔的 JSON-RPC 2.0，
+工具失败返回 `isError: true`，只有编解码/方法不存在/参数非法才走 JSON-RPC error。
+一个实测踩到的坑值得记下来：**stdout 必须只跑协议** —— SQLAlchemy 的 `echo` 会把 SQL 打到 stdout，
+所以两个 server 都在启动时做了 **fd 级 stdout 接管**（`dup` 协议流 + `os.dup2` 把 fd 1 指向 stderr）。
 
 ## 6. 数据库：SQLite 与 PostgreSQL 双方言
 
