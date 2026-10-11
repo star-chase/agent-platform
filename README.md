@@ -272,6 +272,9 @@ python -m app.mcp.server                # stdio 服务
 | `get_trace` | 关键路径、最慢节点、节点尝试次数 |
 | `list_pending_approvals` / `decide_approval` | 控制面，**默认不挂载**，需要 `MCP_ALLOW_CONTROL=1` |
 
+工具通过 HTTP 调本机平台 API，不复制业务逻辑：`AGENT_PLATFORM_API`（默认 `http://localhost:8000`）、
+`MCP_API_TIMEOUT`（默认 30s）；容器里 API 地址写 compose 服务名 `http://api:8000`。
+
 协议层是手写的（`app/mcp/protocol.py`，与 rag-agent 侧同一份实现）：stdio 上用换行分隔的 JSON-RPC 2.0，
 工具失败返回 `isError: true`，只有编解码/方法不存在/参数非法才走 JSON-RPC error。
 一个实测踩到的坑值得记下来：**stdout 必须只跑协议** —— SQLAlchemy 的 `echo` 会把 SQL 打到 stdout，
