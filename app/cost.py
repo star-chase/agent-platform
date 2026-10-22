@@ -22,6 +22,12 @@ DEFAULT_PRICE = {"input": 0.27, "output": 1.10}
 
 TOKENS_PER_UNIT = 1_000_000
 
+# 闸门在名义预算的 90% 处关闭。
+# 比较的是已经落库的花费，正在发出的这一次调用还不在账上。
+# 留出 10% 给这一笔：偏早停的代价是少跑一轮，偏晚停的代价是钱已经花出去。
+# 单次调用仍可能从 89% 一下跳过闸门，这一笔挡不住。
+BUDGET_GATE_RATIO = 0.9
+
 
 def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
     """按模型单价估算一次（或一批）调用的成本，单位美元。
@@ -38,28 +44,33 @@ def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
 def check_budget(spent_usd: float, budget_usd: float | None) -> dict[str, Any]:
     """预算闸门的**判断**这一半（纯函数，不碰数据库）。
 
-    返回 {"budget_usd": ..., "spent_usd": ..., "remaining_usd": ..., "exceeded": bool}
+    返回 {"budget_usd": ..., "gate_usd": ..., "spent_usd": ..., "remaining_usd": ..., "exceeded": bool}
 
     规则（边界值也要想清楚，测试里有）：
     - budget_usd 是 None → 不设预算，永远 exceeded=False，remaining_usd 也是 None
       （None 是"没有上限"，和数字 0 是两件完全不同的事 ——
        单 Agent 的 /agent/run 没有 workflow、没有预算，不能因为查不到就把它拦下来）
-    - spent >= budget → exceeded=True。**用满即停**：钱已经花完了，下一笔调用必然越界，
-      所以"正好花完"必须算超支，不能在边界上留一条缝。
-    - remaining_usd = 预算 - 已花，可以是负数（负多少 = 超了多少）。
-      不要 clamp 成 0 —— 这个数字是给人看"超支多严重"的。
+    - spent >= budget * BUDGET_GATE_RATIO → exceeded=True。闸门收在 90%，
+      正好走到闸门也算超（`>=`），不能在边界上留一条缝。
+      花满名义预算当然也超：90% 已经先拦住了。
+    - remaining_usd = 名义预算 - 已花，可以是负数（负多少 = 超了多少）。
+      不要 clamp 成 0 —— 这个数字是给人看"相对预算超了多少"的。
+      在 90% 和 100% 之间 remaining 仍是正数，所以返回值里同时带 gate_usd。
     """
     if budget_usd is None:
         return {
             "budget_usd": None,
+            "gate_usd": None,
             "spent_usd": spent_usd,
             "remaining_usd": None,
             "exceeded": False
         }
-    exceeded = spent_usd >= budget_usd
+    gate_usd = round(budget_usd * BUDGET_GATE_RATIO, 6)
+    exceeded = spent_usd >= gate_usd
     remaining_usd = budget_usd - spent_usd
     return {
         "budget_usd": budget_usd,
+        "gate_usd": gate_usd,
         "spent_usd": spent_usd,
         "remaining_usd": remaining_usd,
         "exceeded": exceeded

@@ -286,6 +286,7 @@ class AgentFCPersistentExecutor:
             reason = (
                 f"预算超支：已花 {budget_status.get('spent_usd')} USD，"
                 f"预算 {budget_status.get('budget_usd')} USD，"
+                f"闸门 {budget_status.get('gate_usd')} USD，"
                 f"剩余 {budget_status.get('remaining_usd')} USD"
             )
             self._update_task_status("BUDGET_EXCEEDED", reason)
@@ -294,6 +295,7 @@ class AgentFCPersistentExecutor:
             logger.warning("budget_exceeded", extra={
                 "spent_usd": budget_status.get("spent_usd"),
                 "budget_usd": budget_status.get("budget_usd"),
+                "gate_usd": budget_status.get("gate_usd"),
                 "remaining_usd": budget_status.get("remaining_usd"),
             })
             return {

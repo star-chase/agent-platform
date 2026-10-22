@@ -87,8 +87,25 @@ def test_no_budget_means_unlimited():
 
 
 def test_exceeded_when_spent_reaches_budget():
-    """正好花完也算超支：钱已经花完了，下一笔调用必然越界。边界不能留缝。"""
+    """花满名义预算当然超支：90% 闸门已经先拦住了。"""
     assert check_budget(spent_usd=0.01, budget_usd=0.01)["exceeded"] is True
+
+
+def test_gate_closes_at_ninety_percent():
+    """阈值是预算的 90%。正好走到闸门也算超，闸门之下放行。
+
+    比较的是已经落库的花费，正在发出的这一次调用还不在账上，
+    所以提前 10% 停。90% 到 100% 之间 remaining 仍是正数，
+    返回值必须带上 gate_usd，避免日志看起来像「没超却被拦」。
+    """
+    at_gate = check_budget(spent_usd=0.009, budget_usd=0.01)
+    assert at_gate["gate_usd"] == 0.009
+    assert at_gate["exceeded"] is True
+    assert round(at_gate["remaining_usd"], 6) == 0.001
+
+    under_gate = check_budget(spent_usd=0.008999, budget_usd=0.01)
+    assert under_gate["exceeded"] is False
+    assert under_gate["remaining_usd"] > 0
 
 
 def test_remaining_is_negative_when_over():
