@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/star-chase/agent-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/star-chase/agent-platform/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)](requirements.txt)
-[![Tests](https://img.shields.io/badge/tests-245%20passed-2ea043)](tests)
+[![Tests](https://img.shields.io/badge/tests-276%20passed-2ea043)](tests)
 [![Evals](https://img.shields.io/badge/evals-24%20scenarios-7c3aed)](evals)
 
 ---
@@ -82,7 +82,7 @@ curl -X POST localhost:8000/workflows -H 'Content-Type: application/json' \
   -d '{"goal":"分别查一下北京和上海的人口，写一段对比总结","budget_usd":0.05}'
 ```
 
-测试：`python -m pytest tests/ -q` → **245 passed**（不需要网络、不需要数据库、不需要 Redis）。
+测试：`python -m pytest tests/ -q` → **276 passed**（口径：`tests/test_*.py` 中的 `test_*` 函数，当前仓库无 `@parametrize` 展开；不需要网络、不需要数据库、不需要 Redis）。`app/` 下 41 个 Python 模块、6114 行（`wc -l`，含 `__init__.py`）。
 
 场景评测：`python -m evals.run_evals --check` → **24/24 场景通过**（同样离线可跑，覆盖计划校验 / 调度终态 / 治理 / 成本四类场景，报告见 `evals/report.md`）。
 
@@ -159,7 +159,7 @@ scripts/demo/              生成素材的脚本：capture_cost_trace / loadtest
 | 循环 | `for iteration in range(max_iterations)` | 图上的节点 + 边 |
 | 状态 | `steps` 表（每步一行） | checkpoint |
 | 恢复 | `resume()` 从 `steps` 重建 messages | 从 checkpoint 恢复 |
-| 代价 | 消息配对、并行工具调用等协议细节要自己扛 | 框架兜底 |
+| 代价 | 消息配对、单轮多个 tool_call（顺序执行）等协议细节要自己扛 | 框架兜底 |
 
 **结论**：概念是一一对应的。手写一遍之后再看框架，能看出它在替你做什么、
 以及它在哪些地方替你做了你不想被替的决定（比如"历史怎么存"）。
@@ -167,7 +167,7 @@ scripts/demo/              生成素材的脚本：capture_cost_trace / loadtest
 ### 4.2 为什么 Planner 和 Executor 分成两阶段
 
 1. **上下文隔离**：规划需要全局长视野，执行只需要局部信息，混在一起两边都做不好；
-2. **并行**：DAG 一次规划，多个节点可以同时跑（实测 3 worker 提速 29%）；
+2. **并行**：DAG 一次规划，多个节点可以同时跑（压测见 5.1：1→3 worker 吞吐 3.0→7.9 条/分钟，2.6×）；
 3. **局部重试**：一个节点失败只重跑那个节点，不用重跑整条链；
 4. **可审批**：执行前能看到完整的执行计划，人类有机会说不。
 
@@ -249,7 +249,7 @@ GET /workflows/{id}/trace
 
 | 素材 | 内容 | 复现 |
 | --- | --- | --- |
-| [`docs/demo/cost-trace.md`](docs/demo/cost-trace.md) | 一条 workflow 的 `/cost` 与 `/trace` 原始响应：6382 入 + 3478 出 token、$0.005393（预算 $0.05）；关键路径 12.9 s；最慢节点 7.5 s 里 7.4 s 是模型延迟 | `python3 scripts/demo/capture_cost_trace.py` |
+| [`docs/demo/cost-trace.md`](docs/demo/cost-trace.md) | 一条 workflow 的 `/cost` 与 `/trace` 原始响应：6093 入 + 3407 出 token、$0.005393（预算 $0.05）；关键路径 12.9 s；最慢节点 7.5 s 里 7.4 s 是模型延迟 | `python3 scripts/demo/capture_cost_trace.py` |
 | [`docs/demo/loadtest.md`](docs/demo/loadtest.md) | 6 条 workflow 并发：1 worker 119.8 s（3.0 条/分钟）→ 3 worker 45.7 s（7.9 条/分钟），吞吐 2.6×，成本几乎不变（$0.0318 → $0.0307） | `python3 scripts/demo/loadtest.py --label worker-1` |
 | [`docs/demo/fault-injection.md`](docs/demo/fault-injection.md) | 故障注入三连：kill worker（63.6 s 回收 + 节点重试成功）、kill Redis（4 个 PENDING 搁浅 → 补偿重投 39.4 s 自愈）、极小预算（终态 FAILED、不重试） | `python3 scripts/demo/fault_injection.py --scenario all` |
 
@@ -310,7 +310,7 @@ python -m app.mcp.server                # stdio 服务
 **业务 SQL 一行都不用改**，差异全部收在 `app/db.py` 里。
 `DATABASE_URL` 设了就用 PG，否则用 SQLite 文件。
 
-**为什么保留 SQLite**：238 条测试跑在临时 SQLite 上只要 1 秒、零外部依赖。
+**为什么保留 SQLite**：276 项测试跑在临时 SQLite 上只要 1 秒、零外部依赖。
 "能换库"不等于"必须换库" —— 测试用 SQLite、生产用 PG 是最划算的组合。
 
 ---
@@ -319,7 +319,7 @@ python -m app.mcp.server                # stdio 服务
 
 | 坑 | 症状 | 教训 |
 |---|---|---|
-| 并行工具调用 | 一次响应返回 2-6 个 tool_call，第 2 条撞 UNIQUE → worker 崩 | 假对象只造 1 个 tool_call，测试覆盖不到 |
+| 单轮多个 tool_call | 一次响应返回 2-6 个 tool_call，若每条单独写 step，第 2 条会撞 UNIQUE → worker 崩（工具本身是顺序执行的） | 假对象只造 1 个 tool_call，测试覆盖不到 |
 | 加列漏读路径 | 加 `budget_usd` 列后端点 KeyError 500 | 加列只是第一步，**所有读路径**都要跟上 |
 | 加状态漏快照 | 新状态没进某个白名单 → 合法状态没人处理 | 加状态要 grep 所有 `WHERE status IN (...)` |
 | **配置散落** | API 写一个库、worker 读另一个库 → 任务提交 202 后永不执行、零报错 | 配置收成一处（`app/config.py`） |
